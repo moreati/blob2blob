@@ -21,6 +21,10 @@ Prototypes
     Strips file data from an uncompressed .tar file and produces a .mtar file
     containing the metadata plus IPFS CIDs identifying the stripped content.
 
+`zip2mzip.py`
+    WIP. WIll perform the same stripping to a .zip file, producing a .mzip.
+
+
 Related projects and reading
 ----------------------------
 
