@@ -6,6 +6,7 @@ software packages (e.g. '.deb', '.rpm', '.tar.gz', '.tar.xz', '.whl', '.zip')
 bit for bit from similar files and small delta descriptions.
 
 For example
+
 - Given linux-firmware_20221212.git0707b2f2-0ubuntu1_all.deb can
   linux-firmware_20230120.gitbb2d42dc-0ubuntu1_all.deb be obtained without
   downloading all 278 MiB again.
