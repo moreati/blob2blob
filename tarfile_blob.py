@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #-------------------------------------------------------------------
-# tarfile.py
+# tarfile_blob.py
 #-------------------------------------------------------------------
 # Copyright (C) 2002 Lars Gustaebel <lars@gustaebel.de>
 # All rights reserved.
@@ -721,6 +721,7 @@ class TarInfo(object):
     """
 
     __slots__ = dict(
+        header = 'Raw content of header block(s)',
         name = 'Name of the archive member.',
         mode = 'Permission bits.',
         uid = 'User ID of the user who originally stored this member.',
@@ -751,6 +752,7 @@ class TarInfo(object):
         """Construct a TarInfo object. name is the optional name
            of the member.
         """
+        self.header = bytearray()
         self.name = name        # member name
         self.mode = 0o644       # file permissions
         self.uid = 0            # user id
@@ -1067,6 +1069,7 @@ class TarInfo(object):
             raise InvalidHeaderError("bad checksum")
 
         obj = cls()
+        obj.header = bytearray(buf)
         obj.name = nts(buf[0:100], encoding, errors)
         obj.mode = nti(buf[100:108])
         obj.uid = nti(buf[108:116])
@@ -1175,6 +1178,7 @@ class TarInfo(object):
            or longlink member.
         """
         buf = tarfile.fileobj.read(self._block(self.size))
+        self.header += buf
 
         # Fetch the next header and process it.
         try:
@@ -1207,6 +1211,8 @@ class TarInfo(object):
         # Collect sparse structures from extended header blocks.
         while isextended:
             buf = tarfile.fileobj.read(BLOCKSIZE)
+            self.header += buf
+
             pos = 0
             for i in range(21):
                 try:
@@ -1231,6 +1237,7 @@ class TarInfo(object):
         """
         # Read the header information.
         buf = tarfile.fileobj.read(self._block(self.size))
+        self.header += buf
 
         # A pax header stores supplemental information for either
         # the following file (extended) or all following files
@@ -1352,11 +1359,14 @@ class TarInfo(object):
         fields = None
         sparse = []
         buf = tarfile.fileobj.read(BLOCKSIZE)
+        self.header += buf
         fields, buf = buf.split(b"\n", 1)
         fields = int(fields)
         while len(sparse) < fields * 2:
             if b"\n" not in buf:
-                buf += tarfile.fileobj.read(BLOCKSIZE)
+                tmp = tarfile.fileobj.read(BLOCKSIZE)
+                buf += tmp
+                self.header += tmp
             number, buf = buf.split(b"\n", 1)
             sparse.append(int(number))
         next.offset_data = tarfile.fileobj.tell()
