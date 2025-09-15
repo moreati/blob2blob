@@ -18,6 +18,9 @@ For example
 Prototypes
 ----------
 
+`gzip_cf.py`
+    Gzips data with fine control over Gzip headers
+
 `tar2mtar.py`
     Strips file data from an uncompressed .tar file and produces a .mtar file
     containing the metadata plus IPFS CIDs identifying the stripped content.
