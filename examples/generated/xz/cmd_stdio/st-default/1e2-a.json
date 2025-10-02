@@ -1,0 +1,9 @@
+{
+  "args": [
+    "xz",
+    "--keep",
+    "--threads=1"
+  ],
+  "returncode": 0,
+  "stderr": ""
+}

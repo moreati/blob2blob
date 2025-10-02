@@ -1,0 +1,12 @@
+{
+  "args": [
+    "xz",
+    "--keep",
+    "-0",
+    "--threads=1",
+    "<filename>"
+  ],
+  "returncode": 0,
+  "stderr": "",
+  "stdout": ""
+}

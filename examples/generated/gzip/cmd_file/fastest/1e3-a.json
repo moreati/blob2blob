@@ -1,0 +1,12 @@
+{
+  "args": [
+    "gzip",
+    "--keep",
+    "--no-name",
+    "-1",
+    "<filename>"
+  ],
+  "returncode": 0,
+  "stderr": "",
+  "stdout": ""
+}

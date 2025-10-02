@@ -1,0 +1,6 @@
+__pycache__
+.venv
+*.py[cdo]
+blobs
+examples/generated/**/*.gz
+examples/generated/**/*.xz

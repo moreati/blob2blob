@@ -1,0 +1,9 @@
+{
+  "args": [
+    "gzip",
+    "--keep",
+    "--no-name"
+  ],
+  "returncode": 0,
+  "stderr": ""
+}
