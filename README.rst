@@ -18,6 +18,9 @@ For example
 Prototypes
 ----------
 
+`debwalk`
+    Recursively list files in a Debian package
+
 `gzip_cf.py`
     Gzips data with fine control over Gzip headers
 
