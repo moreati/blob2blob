@@ -1,0 +1,13 @@
+{
+  "args": [
+    "zstd",
+    "--no-progress",
+    "--ultra",
+    "-22",
+    "--single-thread",
+    "<filename>"
+  ],
+  "returncode": 0,
+  "stderr": "<filename> :230.00%   (    10 B =>     23 B, <filename>.zst) \n",
+  "stdout": ""
+}

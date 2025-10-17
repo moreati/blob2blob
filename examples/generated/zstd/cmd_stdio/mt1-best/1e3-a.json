@@ -1,0 +1,10 @@
+{
+  "args": [
+    "zstd",
+    "--no-progress",
+    "-19",
+    "--threads=1"
+  ],
+  "returncode": 0,
+  "stderr": ""
+}

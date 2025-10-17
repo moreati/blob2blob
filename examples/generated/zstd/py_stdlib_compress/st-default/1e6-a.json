@@ -1,0 +1,10 @@
+{
+  "args": {
+    "options": {
+      "100": 3,
+      "201": true,
+      "400": 0
+    }
+  },
+  "module": "compression.zstd"
+}

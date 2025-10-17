@@ -1,4 +1,10 @@
 #!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.10"
+# dependencies = [
+#     "backports-zstd; python_version < '3.14'",
+# ]
+# ///
 """
 Write a directory tree of compression examples with metadata
 """
@@ -19,6 +25,11 @@ import tempfile
 import types
 import typing
 import zlib
+
+try:
+    import compression.zstd as zstd
+except ImportError:
+    import backports.zstd as zstd
 
 INPUTS = {
     '0-empty': lambda: b'',
@@ -70,10 +81,11 @@ class BaseCmd(abc.ABC):
         compressed_data = out_file_path.read_bytes()
         out_file_path.unlink()
 
+        filename_placeholder = '<filename>'
         info = dict(
-            args=result.args[:-1] + ['<filename>'],
+            args=result.args[:-1] + [filename_placeholder],
             stdout=result.stdout,
-            stderr=result.stderr,
+            stderr=result.stderr.replace(str(filename), filename_placeholder),
             returncode=result.returncode,
         )
         return compressed_data, info
@@ -129,6 +141,28 @@ class XzCmd(BaseCmd):
     format = 'xz'
 
 
+class ZstdCmd(BaseCmd):
+    common_args = [
+        '--no-progress',
+    ]
+    variants = {
+        'mt1-fastest': ['-1', '--threads=1'],
+        'mt1-default': ['-3', '--threads=1'],
+        'mt1-best': ['-19', '--threads=1'],
+        'mt1-best-ultra': ['--ultra', '-22', '--threads=1'],
+        'mt2-fastest': ['-1', '--threads=2'],
+        'mt2-default': ['-3', '--threads=2'],
+        'mt2-best': ['-19', '--threads=2'],
+        'mt2-best-ultra': ['--ultra', '-22', '--threads=2'],
+        'st-fastest': ['-1', '--single-thread'],
+        'st-default': ['-3', '--single-thread'],
+        'st-best': ['-19', '--single-thread'],
+        'st-best-ultra': ['--ultra', '-22', '--single-thread'],
+    }
+    extension = 'zst'
+    format = 'zstd'
+
+
 class BaseLib(abc.ABC):
     common_args: dict[str, typing.Any]
     variants: dict[str, dict[str, typing.Any]]
@@ -145,8 +179,11 @@ class BaseLib(abc.ABC):
         self.compress_callable = compress_callable
         self.compressor_callable = compressor_callable
 
+    def combined_args(self, variant: str):
+        return self.common_args | self.variants[variant]
+
     def compress(self, data: bytes, variant: str):
-        args = self.common_args | self.variants[variant]
+        args = self.combined_args(variant)
         compressed_data = self.compress_callable(data, **args)
         info = {'args': args, 'module': self.mod.__name__}
         return compressed_data, info
@@ -184,6 +221,60 @@ class XzLib(BaseLib):
     format = 'xz'
 
 
+class ZstdLib(BaseLib):
+    common_args = {
+        'options': {
+            'checksum_flag': True,
+        },
+    }
+    variants = {
+        'mt1-fastest': {'options': {'compression_level': 1, 'nb_workers': 1}},
+        'mt1-default': {'options': {'compression_level': 3, 'nb_workers': 1}},
+        'mt1-best': {'options': {'compression_level': 19, 'nb_workers': 1}},
+        'mt1-best-ultra': {'options': {'compression_level': 22, 'nb_workers': 1}},
+
+        'mt2-fastest': {'options': {'compression_level': 1, 'nb_workers': 2}},
+        'mt2-default': {'options': {'compression_level': 3, 'nb_workers': 2}},
+        'mt2-best': {'options': {'compression_level': 19, 'nb_workers': 2}},
+        'mt2-best-ultra': {'options': {'compression_level': 22, 'nb_workers': 2}},
+
+        'st-fastest': {'options': {'compression_level': 1, 'nb_workers': 0}},
+        'st-default': {'options': {'compression_level': 3, 'nb_workers': 0}},
+        'st-best': {'options': {'compression_level': 19, 'nb_workers': 0}},
+        'st-best-ultra': {'options': {'compression_level': 22, 'nb_workers': 0}},
+    }
+    extension = 'zst'
+    format = 'zstd'
+
+    def __init__(
+            self,
+            mod: types.ModuleType,
+            compress_callable,
+            compressor_callable=None,
+    ):
+        super().__init__(mod, compress_callable, compressor_callable)
+        self._fixup_options(self.common_args)
+        for args in self.variants.values():
+            self._fixup_options(args)
+
+    def _fixup_options(self, args):
+        try:
+            args['options']
+        except KeyError:
+            return
+        args['options'] = {
+            getattr(zstd.CompressionParameter, k): v
+            for k, v in args['options'].items()
+        }
+
+    def combined_args(self, variant: str):
+        args = super().combined_args(variant)
+        options = self.common_args.get('options', {}).copy()
+        options.update(self.variants[variant].get('options', {}))
+        args['options'] = options
+        return args
+
+
 def environment_info():
     info = {}
     uname = platform.uname()
@@ -211,6 +302,10 @@ def environment_info():
                 zlib=dict(
                     ZLIB_VERSION=zlib.ZLIB_VERSION,
                     ZLIB_RUNTIME_VERSION=zlib.ZLIB_RUNTIME_VERSION,
+                ),
+                zstd=dict(
+                    COMPRESSION_LEVEL_DEFAULT=zstd.COMPRESSION_LEVEL_DEFAULT,
+                    zstd_version_info=zstd.zstd_version_info,
                 ),
             ),
 
@@ -276,6 +371,12 @@ def main():
         type=XzCmd,
         metavar='CMD',
     )
+    group.add_argument(
+        '--zstd-cmd',
+        default='zstd',
+        type=ZstdCmd,
+        metavar='CMD',
+    )
 
     parser.add_argument(
         '--output-dir',
@@ -296,11 +397,16 @@ def main():
     )
 
     inputs = {name: fn() for name, fn in INPUTS.items()}
-    cmds: list[BaseCmd] = [args.gzip_cmd, args.xz_cmd]
+    cmds: list[BaseCmd] = [
+        args.gzip_cmd,
+        args.xz_cmd,
+        args.zstd_cmd,
+    ]
     libs: list[BaseLib] = [
         # Python's stdlib gzip doesn't have a compressor class
         GzipLib(gzip, gzip.compress, None),
         XzLib(lzma, lzma.compress, lzma.LZMACompressor),
+        ZstdLib(zstd, zstd.compress, zstd.ZstdCompressor),
     ]
 
     # cmd.compress_file() examples, uncompressed data provided in a named file

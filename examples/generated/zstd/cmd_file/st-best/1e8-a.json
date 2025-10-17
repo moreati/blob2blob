@@ -1,0 +1,12 @@
+{
+  "args": [
+    "zstd",
+    "--no-progress",
+    "-19",
+    "--single-thread",
+    "<filename>"
+  ],
+  "returncode": 0,
+  "stderr": "<filename> :  0.00%   (  95.4 MiB =>   3.00 KiB, <filename>.zst) \n",
+  "stdout": ""
+}

@@ -1,0 +1,11 @@
+{
+  "args": [
+    "zstd",
+    "--no-progress",
+    "--ultra",
+    "-22",
+    "--single-thread"
+  ],
+  "returncode": 0,
+  "stderr": ""
+}

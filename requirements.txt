@@ -1,3 +1,4 @@
 ar>=0.3.2
+backports-zstd;             python_version < '3.14'
 ruamel.yaml>=0.17.21
 zstandard>=0.19.0

@@ -4,3 +4,4 @@ __pycache__
 blobs
 examples/generated/**/*.gz
 examples/generated/**/*.xz
+examples/generated/**/*.zst

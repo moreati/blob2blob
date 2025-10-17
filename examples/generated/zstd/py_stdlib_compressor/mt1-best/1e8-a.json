@@ -1,0 +1,10 @@
+{
+  "args": {
+    "options": {
+      "100": 19,
+      "201": true,
+      "400": 1
+    }
+  },
+  "compressor": "ZstdCompressor"
+}
