@@ -314,7 +314,7 @@ def main():
     # lib.compress() examples, uncompressed data provided as a byte string
     for lib in libs:
         for variant in lib.variants:
-            out_dir = output_base / lib.format / 'py_stdlib' / variant
+            out_dir = output_base / lib.format / 'py_stdlib_compress' / variant
             data_paths: list[pathlib.Path] = []
             for in_name, in_data in inputs.items():
                 out_data, out_info = lib.compress(in_data, variant)
