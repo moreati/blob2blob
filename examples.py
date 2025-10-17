@@ -135,14 +135,30 @@ class BaseLib(abc.ABC):
     extension: str
     format: str
 
-    def __init__(self, mod: types.ModuleType):
+    def __init__(
+            self,
+            mod: types.ModuleType,
+            compress_callable,
+            compressor_callable=None,
+    ):
         self.mod = mod
+        self.compress_callable = compress_callable
+        self.compressor_callable = compressor_callable
 
     def compress(self, data: bytes, variant: str):
         args = self.common_args | self.variants[variant]
-        compressed_data = self.mod.compress(data, **args)
+        compressed_data = self.compress_callable(data, **args)
         info = {'args': args, 'module': self.mod.__name__}
         return compressed_data, info
+
+    def compressor_compress(self, chunks: list[bytes], variant: str):
+        assert self.compressor_callable is not None
+        args = self.combined_args(variant)
+        compressor = self.compressor_callable(**args)
+        compressed_pieces = [compressor.compress(chunk) for chunk in chunks]
+        compressed_pieces.append(compressor.flush())
+        info = {'args': args, 'compressor': type(compressor).__name__}
+        return b''.join(compressed_pieces), info
 
 
 class GzipLib(BaseLib):
@@ -281,7 +297,11 @@ def main():
 
     inputs = {name: fn() for name, fn in INPUTS.items()}
     cmds: list[BaseCmd] = [args.gzip_cmd, args.xz_cmd]
-    libs: list[BaseLib] = [GzipLib(gzip), XzLib(lzma)]
+    libs: list[BaseLib] = [
+        # Python's stdlib gzip doesn't have a compressor class
+        GzipLib(gzip, gzip.compress, None),
+        XzLib(lzma, lzma.compress, lzma.LZMACompressor),
+    ]
 
     # cmd.compress_file() examples, uncompressed data provided in a named file
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -322,6 +342,19 @@ def main():
                 data_paths.append(data_path)
             write_sha256sums(out_dir, [p.name for p in data_paths])
 
+    # lib.*Compressor() examples, uncompressed data provided as an interator of byte strings
+    for lib in libs:
+        if lib.compressor_callable is None:
+            continue
+        for variant in lib.variants:
+            out_dir = output_base / lib.format / 'py_stdlib_compressor' / variant
+            data_paths: list[pathlib.Path] = []
+            for in_name, in_data in inputs.items():
+                chunks = (in_data[i:1024+i] for i in range(0, len(in_data), 1024))
+                out_data, out_info = lib.compressor_compress(chunks, variant)
+                data_path, _  = write_example(lib, out_dir, in_name, out_data, out_info)
+                data_paths.append(data_path)
+            write_sha256sums(out_dir, [p.name for p in data_paths])
 
 if __name__ == '__main__':
     main()

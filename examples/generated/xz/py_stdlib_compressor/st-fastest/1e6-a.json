@@ -1,0 +1,6 @@
+{
+  "args": {
+    "preset": 0
+  },
+  "compressor": "LZMACompressor"
+}
